@@ -269,7 +269,8 @@ class PageEngine {
 
           onPinchRight: (x, y) => this._handlePinch(x, y),
           onZoom: (scale) => this._handleZoom(scale),
-          onFist: () => this._handleFist()
+          onFist: () => this._handleFist(),
+          onIndexMove: (normX, normY) => this._isIndexOnLink(normX, normY)
         });
       })
       .catch(err => {
@@ -344,6 +345,38 @@ class PageEngine {
         indicator.style.opacity = '0';
       }, 1500);
     }
+  }
+
+  _isIndexOnLink(normX, normY) {
+    // Coordonnées miroir corrigées (comme dans _updateCursor)
+    const screenX = (1 - normX) * window.innerWidth;
+    const screenY = normY * window.innerHeight;
+
+    const type = this.pageData ? this.pageData.type : '';
+
+    if (type === 'grid') {
+      const items = document.querySelectorAll('.grid-item');
+      for (const item of items) {
+        const r = item.getBoundingClientRect();
+        if (screenX >= r.left && screenX <= r.right && screenY >= r.top && screenY <= r.bottom)
+          return true;
+      }
+    } else if (type === 'detail_video') {
+      const vc = document.getElementById('video-container');
+      if (vc) {
+        const r = vc.getBoundingClientRect();
+        if (screenX >= r.left && screenX <= r.right && screenY >= r.top && screenY <= r.bottom)
+          return true;
+      }
+    } else if (type === 'link_image') {
+      const img = document.querySelector('.link-img');
+      if (img) {
+        const r = img.getBoundingClientRect();
+        if (screenX >= r.left && screenX <= r.right && screenY >= r.top && screenY <= r.bottom)
+          return true;
+      }
+    }
+    return false;
   }
 
   _handleFist() {

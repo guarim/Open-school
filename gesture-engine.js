@@ -6,6 +6,8 @@
  *   - Double pinch (deux mains) + écartement → zoom in
  *   - Double pinch + rapprochement → zoom out / reset
  *   - Poing fermé → retour page précédente
+ *   - Curseur index : suit l'extrémité de l'index droit en temps réel
+ *     Rouge = pas sur lien, Vert = survol d'une image cliquable
  */
 
 class GestureEngine {
@@ -16,9 +18,14 @@ class GestureEngine {
       onPinchRight: null,      // callback(x, y) pinch main droite
       onZoom: null,            // callback(scale) zoom deux mains
       onFist: null,            // callback() poing fermé
+      onIndexMove: null,       // callback(normX, normY) position index droit
       debug: false,
       ...options
     };
+
+    // Curseur plein écran (div DOM superposée à la page)
+    this._cursor = null;
+    this._createCursor();
 
     this.hands = null;
     this.camera = null;
@@ -29,6 +36,7 @@ class GestureEngine {
     this.zoomTarget = null;
     this.fistCooldown = false;
     this.pinchCooldown = false;
+    this._cursorOnLink = false;
 
     // Seuils
     this.PINCH_THRESHOLD = 0.06;       // distance normalisée pouce-index pour pinch
@@ -36,6 +44,59 @@ class GestureEngine {
     this.ZOOM_SENSITIVITY = 3.0;       // sensibilité du zoom
 
     this._init();
+  }
+
+  /* ---- Curseur plein écran ---- */
+  _createCursor() {
+    const el = document.createElement('div');
+    el.id = 'hand-cursor';
+    el.style.cssText = `
+      position: fixed;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ff6060, #cc0000);
+      border: 3px solid rgba(255,255,255,0.85);
+      box-shadow: 0 0 12px 4px rgba(220,0,0,0.55), 0 2px 8px rgba(0,0,0,0.5);
+      pointer-events: none;
+      z-index: 99999;
+      transform: translate(-50%, -50%);
+      transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.06s linear;
+      display: none;
+    `;
+    document.body.appendChild(el);
+    this._cursor = el;
+  }
+
+  _updateCursor(normX, normY, onLink, isPinching) {
+    if (!this._cursor) return;
+    // MediaPipe renvoie des coordonnées miroir → inverser X
+    const screenX = (1 - normX) * window.innerWidth;
+    const screenY = normY * window.innerHeight;
+
+    this._cursor.style.left = screenX + 'px';
+    this._cursor.style.top  = screenY + 'px';
+    this._cursor.style.display = 'block';
+
+    if (isPinching) {
+      // Pinch : cercle doré agrandi
+      this._cursor.style.background = 'radial-gradient(circle at 35% 35%, #ffe066, #e8a020)';
+      this._cursor.style.boxShadow   = '0 0 20px 8px rgba(232,160,32,0.7), 0 2px 8px rgba(0,0,0,0.5)';
+      this._cursor.style.transform   = 'translate(-50%, -50%) scale(1.5)';
+    } else if (onLink) {
+      // Sur un lien : vert
+      this._cursor.style.background = 'radial-gradient(circle at 35% 35%, #66ff99, #00cc55)';
+      this._cursor.style.boxShadow   = '0 0 14px 5px rgba(0,220,80,0.6), 0 2px 8px rgba(0,0,0,0.5)';
+      this._cursor.style.transform   = 'translate(-50%, -50%) scale(1.15)';
+    } else {
+      // Défaut : rouge
+      this._cursor.style.background = 'radial-gradient(circle at 35% 35%, #ff6060, #cc0000)';
+      this._cursor.style.boxShadow   = '0 0 12px 4px rgba(220,0,0,0.55), 0 2px 8px rgba(0,0,0,0.5)';
+      this._cursor.style.transform   = 'translate(-50%, -50%) scale(1)';
+    }
+  }
+
+  _hideCursor() {
+    if (this._cursor) this._cursor.style.display = 'none';
   }
 
   async _init() {
@@ -130,6 +191,7 @@ class GestureEngine {
     if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
       this.lastBothPinch = false;
       this.lastTwoHandDist = null;
+      this._hideCursor();
       return;
     }
 
@@ -143,6 +205,19 @@ class GestureEngine {
       if (h.label === 'Left') rightHand = hands[i];
       else leftHand = hands[i];
     });
+
+    // === Curseur index droit (landmark 8 = tip de l'index) ===
+    if (rightHand) {
+      const indexTip = rightHand[8];
+      const isPinching = this._isPinch(rightHand);
+      // Notifier page-engine pour la détection hover
+      if (this.options.onIndexMove) {
+        this._cursorOnLink = this.options.onIndexMove(indexTip.x, indexTip.y);
+      }
+      this._updateCursor(indexTip.x, indexTip.y, this._cursorOnLink, isPinching);
+    } else {
+      this._hideCursor();
+    }
 
     // Dessiner les mains en debug
     if (ctx && this.options.debug) {
