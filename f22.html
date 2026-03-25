@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Lycée Jules Verne</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- MediaPipe Hands (CDN officiel, le plus rapide en navigateur) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675466862/drawing_utils.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div id="app">
+  <!-- Contenu de la page (géré par PageEngine selon pages.json) -->
+  <div id="page-content"></div>
+</div>
+
+<!-- Indicateur de zoom -->
+<div id="zoom-indicator">🔍 100%</div>
+
+<!-- Guide des gestes -->
+<div id="gesture-guide">
+  <h4>Gestes</h4>
+  <div class="gesture-item">
+    <span class="gesture-icon">👌</span>
+    <span class="gesture-desc">Pincer main droite sur image → ouvrir</span>
+  </div>
+  <div class="gesture-item">
+    <span class="gesture-icon">🤏🤏</span>
+    <span class="gesture-desc">Deux mains : écarter → zoom+, rapprocher → zoom–</span>
+  </div>
+  <div class="gesture-item">
+    <span class="gesture-icon">✊</span>
+    <span class="gesture-desc">Poing fermé → page précédente</span>
+  </div>
+</div>
+
+<!-- Couche gestes : vidéo caméra + canvas overlay -->
+<div id="gesture-layer">
+  <span id="gesture-status">Clic sur 📷 pour activer les gestes</span>
+  <div style="position:relative; display:inline-block;">
+    <video id="gesture-video" autoplay playsinline muted></video>
+    <canvas id="gesture-canvas"></canvas>
+  </div>
+  <button id="gesture-toggle" onclick="toggleGestureCamera()">📷 Activer gestes</button>
+</div>
+
+<!-- Moteurs -->
+<script src="gesture-engine.js"></script>
+<script src="page-engine.js"></script>
+
+<script>
+  let cameraActive = false;
+  let engine = null;
+
+  function toggleGestureCamera() {
+    const layer = document.getElementById('gesture-layer');
+    const btn = document.getElementById('gesture-toggle');
+    const status = document.getElementById('gesture-status');
+
+    if (!cameraActive) {
+      layer.classList.add('active');
+      btn.textContent = '📷 Désactiver gestes';
+      status.textContent = '🟢 Détection active...';
+      cameraActive = true;
+
+      if (engine) engine._initGestures();
+    } else {
+      layer.classList.remove('active');
+      btn.textContent = '📷 Activer gestes';
+      status.textContent = 'Clic sur 📷 pour activer les gestes';
+      cameraActive = false;
+
+      if (engine && engine.gestureEngine) {
+        engine.gestureEngine.destroy();
+        engine.gestureEngine = null;
+      }
+    }
+  }
+
+  // Lancer le moteur de page
+  document.addEventListener('DOMContentLoaded', async () => {
+    engine = new PageEngine();
+    await engine.init();
+  });
+</script>
+
+</body>
+</html>
