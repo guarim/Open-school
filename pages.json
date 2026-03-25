@@ -164,33 +164,6 @@
       "type": "link_image",
       "image": { "src": "f51.png", "alt": "CDI", "link": "https://lp-lyc-metier-jules-verne-etaples.62.ac-lille.fr/category/cdi/" },
       "back": "formations.html"
-    },
-    {
-      "id": "f7",
-      "file": "f7.html",
-      "title": "Formation 7",
-      "type": "detail_video",
-      "image": { "src": "7.png", "alt": "Formation 7" },
-      "video": "https://www.youtube.com/embed/dQw4w9WgXcQ",
-      "back": "formations.html"
-    },
-    {
-      "id": "f8",
-      "file": "f8.html",
-      "title": "Formation 8",
-      "type": "detail_video",
-      "image": { "src": "8.png", "alt": "Formation 8" },
-      "video": "https://www.youtube.com/embed/dQw4w9WgXcQ",
-      "back": "formations.html"
-    },
-    {
-      "id": "f9",
-      "file": "f9.html",
-      "title": "Formation 9",
-      "type": "detail_video",
-      "image": { "src": "9.png", "alt": "Formation 9" },
-      "video": "https://www.youtube.com/embed/dQw4w9WgXcQ",
-      "back": "formations.html"
     }
   ]
 }
